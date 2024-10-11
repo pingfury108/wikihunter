@@ -25,9 +25,11 @@ function parseMd(html) {
   const doc = parser.parseFromString(html, 'text/html');
   let doc_u = u(doc.body.children);
   console.log(doc_u);
-  let content = doc_u.find("#mw-content-text").find("p").first();
-  if (content) {
-    return content.textContent
+  let content = doc_u.find("#mw-content-text");
+  console.log("data",content.find(".infobox.biota").textContent);
+  let content_p = content.find("p").first();
+  if (content_p) {
+    return content_p.textContent
   }
   return ""
 }
@@ -45,8 +47,8 @@ function parseMdEn(html) {
 }
 
 function OptionsIndex() {
-  const [data, setData] = useState("")
-  const [Result, setResult] = useState("")
+  const [data, setData] = useState()
+  const [result, setResult] = useState("")
 
   const se = function (e) {
     (async () => {
@@ -74,13 +76,13 @@ function OptionsIndex() {
             onClick={se}
           >
             <path
-              fill-rule="evenodd"
+              fillRule="evenodd"
               d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-              clip-rule="evenodd" />
+              clipRule="evenodd" />
           </svg>
         </label>
         <div className="mt-4 text-center">
-          <p id="searchResults" className="text-lg whitespace-pre-wrap">{Result}</p>
+          <p id="searchResults" className="text-lg whitespace-pre-wrap">{result}</p>
         </div>
       </div>
     </div>
