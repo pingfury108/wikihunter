@@ -39,9 +39,7 @@ async function searchSpecies(keyword) {
 
 function parseSpeciesMd(tab) {
   let trs = {};
-  console.log("data", tab);
   tab.find("tbody > tr").each(function (el) {
-    console.log("tr children: ", el.children.length)
     if (el.children.length == 2) {
       let [k, v] = el.textContent.split("\n\n").map(function (s) {
         return s.trim().replace(":", "").replace("：", "")
@@ -49,7 +47,6 @@ function parseSpeciesMd(tab) {
       trs[k] = v;
     }
   });
-  console.log("trs md: ", trs);
   return trs
 }
 
@@ -77,12 +74,10 @@ function parseMd(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   let doc_u = u(doc.body.children);
-  console.log(doc_u);
   let content = doc_u.find("#mw-content-text");
   let tab = content.find(".infobox.biota");
 
   let title = doc_u.find(".mw-page-title-main").text().trim();
-
   let md = parseSpeciesMd(tab);
 
   let item = {
@@ -103,7 +98,6 @@ function parseMdEn(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   let doc_u = u(doc.body.children);
-  console.log(doc_u);
   let content = doc_u.find("#mw-content-text");
   let tab = content.find(".infobox.biota");
   let md = parseSpeciesMd(tab);
@@ -128,7 +122,6 @@ function parseMdfr(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   let doc_u = u(doc.body.children);
-  console.log(doc_u);
   let content = doc_u.find("#mw-content-text");
   let tab = content.find(".taxobox_classification");
   let md = parseSpeciesMd(tab);
@@ -151,18 +144,14 @@ function parseMdfr(html) {
 function parseSpeciesMdEs(tab) {
   let trs = {};
   let doc = u(tab);
-  console.log("data", tab);
   doc.find("tbody > tr").each(function (el) {
-    console.log("tr children: ", el.children.length)
     if (el.children.length == 2) {
-      console.log("es md: ", el.textContent);
       let [k, v] = el.textContent.split("\n").map(function (s) {
         return s.trim().replace(":", "").replace("：", "")
       })
       trs[k] = v;
     }
   });
-  console.log("trs md: ", trs);
   return trs
 }
 
@@ -170,7 +159,6 @@ function parseMdes(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   let doc_u = u(doc.body.children);
-  console.log(doc_u);
   let content = doc_u.find("#mw-content-text");
   let tab = content.find(".infobox").nodes[0];
   let md = parseSpeciesMdEs(tab);
@@ -194,8 +182,10 @@ function OptionsIndex() {
   const [data, setData] = useState([])
   const [result, setResult] = useState([])
 
-  const se = function (kw: String) {
-    (async () => {
+  const se = async function (e) {
+    let items = [];
+    for (const kw of data) {
+      console.log("search kw: ", kw, items);
       let html_text_species = await searchSpecies(kw);
       let html_text_zh = await search(kw, "zh");
       let html_text_en = await search(kw, "en");
@@ -215,8 +205,9 @@ function OptionsIndex() {
         "es": es_md
       };
       console.log("item: ", item);
-      setResult([...result, item]);
-    })();
+      items.push(item)
+    }
+    setResult(items);
   }
 
   const ItemList = () => {
@@ -246,20 +237,11 @@ function OptionsIndex() {
             <td><span>{item.es.metadata["Familia"]}</span></td> {/* 科名(es) */}
             <td><span>{item.es.metadata["Género"]}</span></td> {/* 属名(es) */}
             <td><p>{item.es.describe}</p></td> {/* 描述(es)*/}
-
           </tr>
         ))}
       </tbody>
     );
   };
-
-  const handleKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      console.log('Enter key pressed:', "回车");
-      data.forEach(kw => se(kw));
-    }
-  };
-
 
   return (
     <div className="w-screen h-screen">
@@ -267,22 +249,23 @@ function OptionsIndex() {
         <a className="btn btn-ghost text-xl">维基猎手</a>
       </div>
       <div className="container mx-auto p-8">
-        <label className="input input-bordered flex items-center gap-2">
-          <input type="text" className="grow" placeholder="Search" onChange={(e) => setData(e.target.value.split("\n"))}
-            onKeyDown={handleKeyDown} />
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className="h-4 w-4 opacity-70"
-            onClick={(_) => data.forEach(kw => se(kw))}
-          >
-            <path
-              fillRule="evenodd"
-              d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-              clipRule="evenodd" />
-          </svg>
-        </label>
+        <div className="flex gap-2 item-center input-bordered">
+          <textarea className="textarea textarea-bordered w-full grow h-4" placeholder="请输入搜索内容..."
+            onChange={(e) => setData(e.target.value.trim().split("\n"))}
+          ></textarea>
+          <button className="btn" onClick={se}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              className="h-4 w-4 opacity-70"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                clipRule="evenodd" />
+            </svg></button>
+        </div>
         <div className="mt-4">
           <div className="overflow-x-auto">
             <table className="table table-xs">
@@ -316,7 +299,7 @@ function OptionsIndex() {
             </table>
           </div>
         </div>
-      </div>
+      </div >
     </div >
   )
 }
