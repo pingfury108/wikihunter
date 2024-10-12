@@ -20,18 +20,46 @@ async function search(keyword, lang) {
   return ""
 }
 
+function parseSpeciesMd(tab) {
+  let trs = {};
+  console.log("data", tab);
+  tab.find("tbody > tr").each(function (el) {
+    console.log("tr children: ", el.children.length)
+    if (el.children.length == 2) {
+      let [k, v] = el.textContent.split("\n\n").map(function (s) {
+        return s.trim().replace(":", "").replace("：", "")
+      })
+      trs[k] = v;
+    }
+  });
+  console.log("trs md: ", trs);
+  return trs
+}
+
 function parseMd(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   let doc_u = u(doc.body.children);
   console.log(doc_u);
   let content = doc_u.find("#mw-content-text");
-  console.log("data",content.find(".infobox.biota").textContent);
+  let tab = content.find(".infobox.biota");
+
+  let title = doc_u.find(".mw-page-title-main").text().trim();
+
+  let md = parseSpeciesMd(tab);
+
+  let item = {
+    metadata: md,
+    title: title,
+  };
+
   let content_p = content.find("p").first();
   if (content_p) {
-    return content_p.textContent
+    item["describe"] = content_p.textContent.trim();
+  } else {
+    item["describe"] = ""
   }
-  return ""
+  return item
 }
 
 function parseMdEn(html) {
@@ -39,41 +67,135 @@ function parseMdEn(html) {
   const doc = parser.parseFromString(html, 'text/html');
   let doc_u = u(doc.body.children);
   console.log(doc_u);
-  let content = doc_u.find("#mw-content-text").find("p").nodes[1];
-  if (content) {
-    return content.textContent
+  let content = doc_u.find("#mw-content-text");
+  let tab = content.find(".infobox.biota");
+  let md = parseSpeciesMd(tab);
+  let title = doc_u.find(".mw-page-title-main").text().trim();
+
+  let item = {
+    metadata: md,
+    title: title,
+  };
+
+  let content_p = content.find("p:not(.mw-empty-elt)").first();
+  if (content_p) {
+    item["describe"] = content_p.textContent.trim();
+  } else {
+    item["describe"] = ""
   }
-  return ""
+  return item
+}
+
+
+function parseMdfr(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  let doc_u = u(doc.body.children);
+  console.log(doc_u);
+  let content = doc_u.find("#mw-content-text");
+  let tab = content.find(".infobox.biota");
+  let md = parseSpeciesMd(tab);
+  let title = doc_u.find(".mw-page-title-main").text().trim();
+
+  let item = {
+    metadata: md,
+    title: title,
+  };
+
+  let content_p = content.find("p:not(.mw-empty-elt)").first();
+  if (content_p) {
+    item["describe"] = content_p.textContent.trim();
+  } else {
+    item["describe"] = ""
+  }
+  return item
+}
+
+function parseMdes(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  let doc_u = u(doc.body.children);
+  console.log(doc_u);
+  let content = doc_u.find("#mw-content-text");
+  let tab = content.find(".infobox.biota");
+  let md = parseSpeciesMd(tab);
+  let title = doc_u.find(".mw-page-title-main").text().trim();
+
+  let item = {
+    metadata: md,
+    title: title,
+  };
+
+  let content_p = content.find("p:not(.mw-empty-elt)").first();
+  if (content_p) {
+    item["describe"] = content_p.textContent.trim();
+  } else {
+    item["describe"] = ""
+  }
+  return item
 }
 
 function OptionsIndex() {
-  const [data, setData] = useState()
-  const [result, setResult] = useState("")
+  const [data, setData] = useState("")
+  const [result, setResult] = useState([])
 
-  const se = function (e) {
+  const se = function (kw: String) {
     (async () => {
-      let html_text_zh = await search(data, "zh");
-      let html_text_en = await search(data, "en");
+      let html_text_zh = await search(kw, "zh");
+      let html_text_en = await search(kw, "en");
+      let html_text_fr = await search(kw, "fr");
+      let html_text_es = await search(kw, "es");
       let zh_md = parseMd(html_text_zh);
       let en_md = parseMdEn(html_text_en);
-      setResult(`${zh_md}\n${en_md}`);
+      let fr_md = parseMdfr(html_text_fr);
+      let es_md = parseMdfr(html_text_es);
+      let item = {
+        "name": kw,
+        "zh": zh_md,
+        "en": en_md,
+        "fr": fr_md,
+        "es": es_md
+      };
+      console.log("item: ", item);
+      setResult([item]);
     })();
   }
+
+  const ItemList = () => {
+    return (
+      <tbody>
+        {result.map((item, index) => (
+          <tr key={index}>
+            <th>{index + 1}</th>  {/* 序号 */}
+            <td>{item.name}</td> {/* 学名 */}
+            <td>{item.en.title}</td> {/* 名称(en)*/}
+            <td>{item.en.metadata["Family"]}</td> {/* 科名(en) */}
+            <td>{item.en.metadata["Genus"]}</td> {/* 属名(en) */}
+            <td>{item.en.describe}</td> {/* 描述(en)*/}
+            <td>{item.zh.title}</td>  {/* 名称(zh)*/}
+            <td>{item.zh.metadata["科"]}</td> {/* 科名(zh) */}
+            <td>{item.zh.metadata["属"]}</td> {/* 属名(zh) */}
+            <td>{item.zh.describe}</td> {/* 描述(zh)*/}
+          </tr>
+        ))}
+      </tbody>
+    );
+  };
 
   return (
     <div className="w-screen h-screen">
       <div className="navbar bg-base-100">
-        <a className="btn btn-ghost text-xl">维基百科猎手</a>
+        <a className="btn btn-ghost text-xl">维基猎手</a>
       </div>
       <div className="container mx-auto p-8">
         <label className="input input-bordered flex items-center gap-2">
-          <input type="text" className="grow" placeholder="Search" onChange={(e) => setData(e.target.value)} value={data} />
+          <input type="text" className="grow" placeholder="Search" onChange={(e) => setData(e.target.value)} />
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 16 16"
             fill="currentColor"
             className="h-4 w-4 opacity-70"
-            onClick={se}
+            onClick={(e) => se(data)}
           >
             <path
               fillRule="evenodd"
@@ -81,8 +203,28 @@ function OptionsIndex() {
               clipRule="evenodd" />
           </svg>
         </label>
-        <div className="mt-4 text-center">
-          <p id="searchResults" className="text-lg whitespace-pre-wrap">{result}</p>
+        <div className="mt-4">
+          <div className="overflow-x-auto">
+            <table className="table table-xs">
+              <thead>
+                <tr>
+                  <th>序号</th>
+                  <th>学名</th>
+
+                  <th>名称(en)</th>
+                  <th>科名(en)</th>
+                  <th>属名(en)</th>
+                  <th>描述(en)</th>
+
+                  <th>名称(zh)</th>
+                  <th>科名(zh)</th>
+                  <th>属名(zh)</th>
+                  <th>描述(zh)</th>
+                </tr>
+              </thead>
+              <ItemList />
+            </table>
+          </div>
         </div>
       </div>
     </div>
