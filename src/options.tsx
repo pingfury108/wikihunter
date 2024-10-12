@@ -181,6 +181,7 @@ function parseMdes(html) {
 function OptionsIndex() {
   const [data, setData] = useState([])
   const [result, setResult] = useState([])
+  const [item, setItem] = useState(null)
 
   const se = async function (e) {
     let items = [];
@@ -214,34 +215,62 @@ function OptionsIndex() {
     return (
       <tbody>
         {result.map((item, index) => (
-          <tr key={index}>
+          <tr key={index} onClick={() => setItem(item)}>
             <th>{index + 1}</th>  {/* 序号 */}
             <td><span>{item.name}</span></td> {/* 学名 */}
 
             <td><span>{item.en.title}</span></td> {/* 名称(en)*/}
             <td><span>{item.en.metadata["Family"]}</span></td> {/* 科名(en) */}
             <td><span>{item.en.metadata["Genus"]}</span></td> {/* 属名(en) */}
-            <td><p>{item.en.describe}</p></td> {/* 描述(en)*/}
+            {/*
+            <td className=""><p>{item.en.describe}</p></td> {/* 描述(en)*/}
 
             <td><span>{item.zh.title}</span></td>  {/* 名称(zh)*/}
             <td><span>{item.zh.metadata["科"]}</span></td> {/* 科名(zh) */}
             <td><span>{item.zh.metadata["属"]}</span></td> {/* 属名(zh) */}
+            {/*
             <td><p>{item.zh.describe}</p></td> {/* 描述(zh)*/}
 
             <td><span>{item.fr.title}</span></td>  {/* 名称(fr)*/}
             <td><span>{item.fr.metadata["Ordre"]}</span></td> {/* 科名(fr) */}
             <td><span>{item.fr.metadata["Famille"]}</span></td> {/* 属名(fr) */}
+            {/*
             <td><span>{item.fr.describe}</span></td> {/* 描述(fr)*/}
 
             <td><span>{item.es.title}</span></td>  {/* 名称(es)*/}
             <td><span>{item.es.metadata["Familia"]}</span></td> {/* 科名(es) */}
             <td><span>{item.es.metadata["Género"]}</span></td> {/* 属名(es) */}
+            {/*
             <td><p>{item.es.describe}</p></td> {/* 描述(es)*/}
           </tr>
         ))}
       </tbody>
     );
   };
+
+  const ItemDescibe = () => {
+    if (item) {
+      return (
+        <div>
+          <div>
+            <p>{item.zh.describe}</p>
+          </div>
+          <div>
+            <p>{item.en.describe}</p>
+          </div>
+          <div>
+            <p>{item.fr.describe}</p>
+          </div>
+          <div>
+            <p>{item.es.describe}</p>
+          </div>
+        </div>
+      )
+    } else {
+      return <></>
+    }
+
+  }
 
   return (
     <div className="w-screen h-screen">
@@ -266,8 +295,8 @@ function OptionsIndex() {
                 clipRule="evenodd" />
             </svg></button>
         </div>
-        <div className="mt-4">
-          <div className="overflow-x-auto">
+        <div className="mt-4 flex flex-row h-full">
+          <div className="overflow-x-auto w-4/5 p-2">
             <table className="table table-xs">
               <thead>
                 <tr>
@@ -277,26 +306,62 @@ function OptionsIndex() {
                   <th>名称(en)</th>
                   <th>科名(en)</th>
                   <th>属名(en)</th>
+                  {/*
                   <th>描述(en)</th>
+                  */}
 
                   <th>名称(zh)</th>
                   <th>科名(zh)</th>
                   <th>属名(zh)</th>
+                  {/*
                   <th>描述(zh)</th>
+                    */}
+
 
                   <th>名称(fr)</th>
                   <th>科名(fr)</th>
                   <th>属名(fr)</th>
+                  {/*
                   <th>描述(fr)</th>
+                    */}
+
 
                   <th>名称(es)</th>
                   <th>科名(es)</th>
                   <th>属名(es)</th>
-                  <th>描述(es)</th>
+                  {/*
+<th>描述(es)</th>
+                    */}
+
                 </tr>
               </thead>
               <ItemList />
+              <tfoot className={result.length > 20 ? '' : 'hidden'}>
+                <tr>
+                  <th>序号</th>
+                  <th>学名</th>
+
+                  <th>名称(en)</th>
+                  <th>科名(en)</th>
+                  <th>属名(en)</th>
+
+                  <th>名称(zh)</th>
+                  <th>科名(zh)</th>
+                  <th>属名(zh)</th>
+
+                  <th>名称(fr)</th>
+                  <th>科名(fr)</th>
+                  <th>属名(fr)</th>
+
+                  <th>名称(es)</th>
+                  <th>科名(es)</th>
+                  <th>属名(es)</th>
+                </tr>
+              </tfoot>
             </table>
+          </div>
+          <div className="w-1/5 p-2 pt-10">
+            <ItemDescibe />
           </div>
         </div>
       </div >
