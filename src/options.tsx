@@ -15,9 +15,9 @@ async function search(keyword, lang) {
     // 获取页面内容，这部分需要处理可能存在的跨域问题
     const pageResponse = await fetch(pageUrl);
     const pageText = await pageResponse.text();
-    return pageText
+    return [pageText, pageUrl]
   }
-  return ""
+  return ["", ""]
 }
 
 async function searchSpecies(keyword) {
@@ -32,9 +32,16 @@ async function searchSpecies(keyword) {
     // 获取页面内容，这部分需要处理可能存在的跨域问题
     const pageResponse = await fetch(pageUrl);
     const pageText = await pageResponse.text();
-    return pageText
+    return [pageText, pageUrl]
   }
-  return ""
+  return ["", ""]
+}
+
+async function searchCommons(keyword) {
+  const url = `https://commons.wikimedia.org/w/api.php?srsearch=${encodeURIComponent(keyword)}&title=Special%3AMediaSearch&go=Go&wprov=acrw1_0`; // 只取第一个结果
+  const response = await fetch(url);
+  const pageText = await response.text();
+  return [pageText, url]
 }
 
 function parseSpeciesMd(tab) {
@@ -101,7 +108,7 @@ function parseMdEn(html) {
   let content = doc_u.find("#mw-content-text");
   let tab = content.find(".infobox.biota");
   let md = parseSpeciesMd(tab);
-  let title = doc_u.find(".mw-page-title-main").text().trim();
+  let title = doc_u.find("#firstHeading").text().trim();
 
   let item = {
     metadata: md,
@@ -185,13 +192,16 @@ function OptionsIndex() {
 
   const se = async function (e) {
     let items = [];
+    setResult([]);
+    setItem(null);
     for (const kw of data) {
       console.log("search kw: ", kw, items);
-      let html_text_species = await searchSpecies(kw);
-      let html_text_zh = await search(kw, "zh");
-      let html_text_en = await search(kw, "en");
-      let html_text_fr = await search(kw, "fr");
-      let html_text_es = await search(kw, "es");
+      let [html_text_species, species_url] = await searchSpecies(kw);
+      let [html_text_img, imag_url] = await searchCommons(kw);
+      let [html_text_zh, zh_url] = await search(kw, "zh");
+      let [html_text_en, en_url] = await search(kw, "en");
+      let [html_text_fr, fr_url] = await search(kw, "fr");
+      let [html_text_es, es_url] = await search(kw, "es");
 
       let species_md = parseMdSpecies(html_text_species);
       let zh_md = parseMd(html_text_zh);
@@ -200,69 +210,108 @@ function OptionsIndex() {
       let es_md = parseMdes(html_text_es);
       let item = {
         "name": species_md.title,
+        "species_url": species_url,
         "zh": zh_md,
+        "zh_url": zh_url,
         "en": en_md,
+        "en_url": en_url,
         "fr": fr_md,
-        "es": es_md
+        "fr_url": fr_url,
+        "es": es_md,
+        "es_url": es_url,
+        "img_url": imag_url,
       };
       console.log("item: ", item);
-      items.push(item)
+      items.push(item);
     }
     setResult(items);
   }
 
-  const ItemList = () => {
-    return (
-      <tbody>
-        {result.map((item, index) => (
-          <tr key={index} onClick={() => setItem(item)}>
-            <th>{index + 1}</th>  {/* 序号 */}
-            <td><span>{item.name}</span></td> {/* 学名 */}
+  const ItemList = ({ result }) => {
+    if (result.length > 0) {
+      return (
+        <div className="h-96">
+          {result.map((item, index) => (
+            <div key={index} tabIndex={index} className="collapse collapse-arrow w-full">
+              <div className="collapse-title">
+                <table className="table table-xs">
+                  <thead>
+                    <tr>
+                      <th>序号</th>
+                      <th>学名</th>
+                      <th>名称(en)</th>
+                      <th>科名(en)</th>
+                      <th>属名(en)</th>
+                      <th>名称(zh)</th>
+                      <th>科名(zh)</th>
+                      <th>属名(zh)</th>
+                      <th>名称(fr)</th>
+                      <th>科名(fr)</th>
+                      <th>属名(fr)</th>
+                      <th>名称(es)</th>
+                      <th>科名(es)</th>
+                      <th>属名(es)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th>{index + 1}</th>  {/* 序号 */}
+                      <td><span>{item.name}</span></td> {/* 学名 */}
+                      <td><span>{item.en.title}</span></td> {/* 名称(en)*/}
+                      <td><span>{item.en.metadata["Family"]}</span></td> {/* 科名(en) */}
+                      <td><span>{item.en.metadata["Genus"]}</span></td> {/* 属名(en) */}
+                      <td><span>{item.zh.title}</span></td>  {/* 名称(zh)*/}
+                      <td><span>{item.zh.metadata["科"]}</span></td> {/* 科名(zh) */}
+                      <td><span>{item.zh.metadata["属"]}</span></td> {/* 属名(zh) */}
+                      <td><span>{item.fr.title}</span></td>  {/* 名称(fr)*/}
+                      <td><span>{item.fr.metadata["Ordre"]}</span></td> {/* 科名(fr) */}
+                      <td><span>{item.fr.metadata["Famille"]}</span></td> {/* 属名(fr) */}
+                      <td><span>{item.es.title}</span></td>  {/* 名称(es)*/}
+                      <td><span>{item.es.metadata["Familia"]}</span></td> {/* 科名(es) */}
+                      <td><span>{item.es.metadata["Género"]}</span></td> {/* 属名(es) */}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="collapse-content">
+                <ItemDescibe item={item} />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    } else {
+      return (
+        <div>
+        </div>
+      )
+    }
 
-            <td><span>{item.en.title}</span></td> {/* 名称(en)*/}
-            <td><span>{item.en.metadata["Family"]}</span></td> {/* 科名(en) */}
-            <td><span>{item.en.metadata["Genus"]}</span></td> {/* 属名(en) */}
-            {/*
-            <td className=""><p>{item.en.describe}</p></td> {/* 描述(en)*/}
-
-            <td><span>{item.zh.title}</span></td>  {/* 名称(zh)*/}
-            <td><span>{item.zh.metadata["科"]}</span></td> {/* 科名(zh) */}
-            <td><span>{item.zh.metadata["属"]}</span></td> {/* 属名(zh) */}
-            {/*
-            <td><p>{item.zh.describe}</p></td> {/* 描述(zh)*/}
-
-            <td><span>{item.fr.title}</span></td>  {/* 名称(fr)*/}
-            <td><span>{item.fr.metadata["Ordre"]}</span></td> {/* 科名(fr) */}
-            <td><span>{item.fr.metadata["Famille"]}</span></td> {/* 属名(fr) */}
-            {/*
-            <td><span>{item.fr.describe}</span></td> {/* 描述(fr)*/}
-
-            <td><span>{item.es.title}</span></td>  {/* 名称(es)*/}
-            <td><span>{item.es.metadata["Familia"]}</span></td> {/* 科名(es) */}
-            <td><span>{item.es.metadata["Género"]}</span></td> {/* 属名(es) */}
-            {/*
-            <td><p>{item.es.describe}</p></td> {/* 描述(es)*/}
-          </tr>
-        ))}
-      </tbody>
-    );
   };
 
-  const ItemDescibe = () => {
+  const ItemDescibe = ({ item }) => {
     if (item) {
       return (
         <div>
-          <div>
-            <p>{item.zh.describe}</p>
+          <div className="p-3">
+            <div className="badge badge-primary badge-outline text-xs">中文原站内容</div>
+            <iframe src={item.zh_url} sandbox="allow-scripts allow-same-origin" className="w-full h-96"></iframe>
           </div>
-          <div>
-            <p>{item.en.describe}</p>
+          <div className="p-3">
+            <div className="badge badge-primary badge-outline text-xs">英文原站内容</div>
+            <iframe src={item.en_url} sandbox="allow-scripts allow-same-origin" className="w-full h-96"></iframe>
           </div>
-          <div>
-            <p>{item.fr.describe}</p>
+          <div className="p-3">
+            <div className="badge badge-primary badge-outline text-xs">法语原站内容</div>
+            <iframe src={item.fr_url} sandbox="allow-scripts allow-same-origin" className="w-full h-96"></iframe>
           </div>
-          <div>
-            <p>{item.es.describe}</p>
+          <div className="p-3">
+            <div className="badge badge-primary badge-outline text-xs">西班牙语原站内容</div>
+            <iframe src={item.es_url} sandbox="allow-scripts allow-same-origin" className="w-full h-96" ></iframe>
+          </div>
+          <div className="p-3">
+            <div className="badge badge-primary badge-outline text-xs">科学信息原站内容</div>
+            <iframe src={item.species_url} sandbox="allow-scripts allow-same-origin" className="w-full h-96" ></iframe>
           </div>
         </div>
       )
@@ -282,7 +331,7 @@ function OptionsIndex() {
           <textarea className="textarea textarea-bordered w-full grow h-4" placeholder="请输入搜索内容..."
             onChange={(e) => setData(e.target.value.trim().split("\n"))}
           ></textarea>
-          <button className="btn" onClick={se}>
+          <button className="btn" onClick={async (e) => await se(e)}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 16 16"
@@ -295,76 +344,10 @@ function OptionsIndex() {
                 clipRule="evenodd" />
             </svg></button>
         </div>
-        <div className="mt-4 flex flex-row h-full">
-          <div className="overflow-x-auto w-4/5 p-2">
-            <table className="table table-xs">
-              <thead>
-                <tr>
-                  <th>序号</th>
-                  <th>学名</th>
-
-                  <th>名称(en)</th>
-                  <th>科名(en)</th>
-                  <th>属名(en)</th>
-                  {/*
-                  <th>描述(en)</th>
-                  */}
-
-                  <th>名称(zh)</th>
-                  <th>科名(zh)</th>
-                  <th>属名(zh)</th>
-                  {/*
-                  <th>描述(zh)</th>
-                    */}
-
-
-                  <th>名称(fr)</th>
-                  <th>科名(fr)</th>
-                  <th>属名(fr)</th>
-                  {/*
-                  <th>描述(fr)</th>
-                    */}
-
-
-                  <th>名称(es)</th>
-                  <th>科名(es)</th>
-                  <th>属名(es)</th>
-                  {/*
-<th>描述(es)</th>
-                    */}
-
-                </tr>
-              </thead>
-              <ItemList />
-              <tfoot className={result.length > 20 ? '' : 'hidden'}>
-                <tr>
-                  <th>序号</th>
-                  <th>学名</th>
-
-                  <th>名称(en)</th>
-                  <th>科名(en)</th>
-                  <th>属名(en)</th>
-
-                  <th>名称(zh)</th>
-                  <th>科名(zh)</th>
-                  <th>属名(zh)</th>
-
-                  <th>名称(fr)</th>
-                  <th>科名(fr)</th>
-                  <th>属名(fr)</th>
-
-                  <th>名称(es)</th>
-                  <th>科名(es)</th>
-                  <th>属名(es)</th>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          <div className="w-1/5 p-2 pt-10">
-            <ItemDescibe />
-          </div>
+        <div className="mt-4 h-full w-full">
+          <ItemList result={result} />
         </div>
-      </div >
+      </div>
     </div >
   )
 }
